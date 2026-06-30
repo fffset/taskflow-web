@@ -11,7 +11,12 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const isAuthEndpoint =
+      error.config?.url?.includes('/auth/login') ||
+      error.config?.url?.includes('/auth/register') ||
+      error.config?.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       try {
         await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
         return api.request(error.config);
