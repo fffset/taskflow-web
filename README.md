@@ -251,6 +251,7 @@ Backend Faz 3 (big data pipeline) ile entegrasyon.
 | 7.4 | E2E testler (Playwright) — auth, kanban akışı | ⬜ |
 | 7.5 | Erişilebilirlik (a11y) denetimi | ⬜ |
 | 7.6 | Dark mode desteği | ⬜ |
+| 7.7 | i18n — çoklu dil desteği (next-intl, TR/EN). Tüm hardcoded metinleri messages/ altına taşı | ⬜ |
 
 ---
 
