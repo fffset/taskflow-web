@@ -13,6 +13,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTasks, useTaskStatuses, useCreateTask } from '@/hooks/use-task';
+import { TaskDetailModal } from '@/components/task/task-detail-modal';
 import type { Task, TaskPriority } from '@/services/task/task.types';
 
 const createTaskSchema = z.object({
@@ -32,9 +33,12 @@ const priorityColors: Record<TaskPriority, string> = {
   URGENT: 'bg-red-100 text-red-700',
 };
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   return (
-    <Card className="cursor-pointer hover:border-primary transition-colors mb-3">
+    <Card
+      className="cursor-pointer hover:border-primary transition-colors mb-3"
+      onClick={onClick}
+    >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium leading-tight">{task.title}</p>
@@ -100,6 +104,7 @@ export default function BoardDetailPage({
 }) {
   const { workspaceId, boardId } = use(params);
   const [open, setOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const { data: tasks, isLoading } = useTasks(workspaceId, boardId);
   const { data: statuses } = useTaskStatuses(workspaceId);
@@ -220,7 +225,11 @@ export default function BoardDetailPage({
 
                 <div className="bg-muted/40 rounded-xl p-2 min-h-[400px]">
                   {tasksByStatus(status.id).map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onClick={() => setSelectedTaskId(task.id)}
+                    />
                   ))}
 
                   {tasksByStatus(status.id).length === 0 && (
@@ -234,6 +243,14 @@ export default function BoardDetailPage({
           </div>
         )}
       </div>
+
+      <TaskDetailModal
+        key={selectedTaskId}
+        workspaceId={workspaceId}
+        boardId={boardId}
+        taskId={selectedTaskId}
+        onClose={() => setSelectedTaskId(null)}
+      />
     </div>
   );
 }
