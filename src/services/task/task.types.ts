@@ -29,6 +29,12 @@ export interface Task {
   _count?: { subTasks: number; comments: number };
   createdAt: string;
   updatedAt: string;
+  subTasks?: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+    assignee: { id: string; name: string; avatarUrl: string | null } | null;
+  }[];
 }
 
 export interface CreateTaskPayload {
