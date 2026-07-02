@@ -1,29 +1,34 @@
 'use client';
 
-import { use } from 'react';
-import { usePathname } from 'next/navigation';
-import { WorkspaceShell } from '@/components/layout/workspace-shell';
+import { Sidebar } from '@/components/layout/sidebar';
+import { UserMenu } from '@/components/layout/user-menu';
+import { Breadcrumb } from '@/components/layout/breadcrumb';
 
-export default function WorkspaceLayout({
-  params,
-  children,
-}: {
-  params: Promise<{ workspaceId: string }>;
+interface WorkspaceShellProps {
+  workspaceId: string;
+  projectId?: string;
+  boardId?: string;
   children: React.ReactNode;
-}) {
-  const { workspaceId } = use(params);
-  const pathname = usePathname();
+}
 
-  const projectMatch = /projects\/([^/]+)/.exec(pathname);
-  const boardMatch = /boards\/([^/]+)/.exec(pathname);
-
+export function WorkspaceShell({
+  workspaceId,
+  projectId,
+  boardId,
+  children,
+}: WorkspaceShellProps) {
   return (
-    <WorkspaceShell
-      workspaceId={workspaceId}
-      projectId={projectMatch?.[1]}
-      boardId={boardMatch?.[1]}
-    >
-      {children}
-    </WorkspaceShell>
+    <div className="flex">
+      <Sidebar workspaceId={workspaceId} />
+
+      <div className="flex-1 min-w-0">
+        <header className="h-14 border-b flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur z-10">
+          <Breadcrumb workspaceId={workspaceId} projectId={projectId} boardId={boardId} />
+          <UserMenu />
+        </header>
+
+        <main>{children}</main>
+      </div>
+    </div>
   );
 }
