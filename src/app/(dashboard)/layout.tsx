@@ -1,9 +1,10 @@
 'use client';
 
-import { useMe } from '@/hooks/use-auth';
+import { useAutoRefresh, useMe } from '@/hooks/use-auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isLoading, isFetching, isSuccess, isError } = useMe();
+  useAutoRefresh();
 
   const showLoading = isLoading || (isFetching && !isSuccess) || (!isSuccess && !isError);
 
