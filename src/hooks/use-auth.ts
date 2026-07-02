@@ -15,6 +15,7 @@ export function useMe() {
       return user;
     },
     retry: false,
+    staleTime: 0,
   });
 }
 
