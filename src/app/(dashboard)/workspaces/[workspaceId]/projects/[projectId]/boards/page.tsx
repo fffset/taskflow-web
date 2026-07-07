@@ -2,7 +2,7 @@
 
 import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Kanban } from 'lucide-react';
+import { Plus, Kanban, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,31 +54,42 @@ export default function BoardsPage({
             <p className="text-muted-foreground mt-1">Sprint&apos;ler ve board&apos;lar</p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Yeni Board
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Board Oluştur</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
-                <div className="space-y-2">
-                  <Label>İsim</Label>
-                  <Input placeholder="Sprint 1" {...register('name')} />
-                  {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name.message}</p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full" disabled={isPending}>
-                  {isPending ? 'Oluşturuluyor...' : 'Oluştur'}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push(`/workspaces/${workspaceId}/projects/${projectId}/settings`)}
+              title="Proje Ayarları"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Yeni Board
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Board Oluştur</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
+                  <div className="space-y-2">
+                    <Label>İsim</Label>
+                    <Input placeholder="Sprint 1" {...register('name')} />
+                    {errors.name && (
+                      <p className="text-sm text-destructive">{errors.name.message}</p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isPending}>
+                    {isPending ? 'Oluşturuluyor...' : 'Oluştur'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {isLoading ? (
