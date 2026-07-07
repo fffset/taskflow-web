@@ -25,3 +25,9 @@ export interface CreateProjectPayload {
   description?: string;
   statusId: string;
 }
+
+export interface UpdateProjectPayload {
+  name?: string;
+  description?: string;
+  statusId?: string;
+}
