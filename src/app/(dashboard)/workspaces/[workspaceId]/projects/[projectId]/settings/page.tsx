@@ -22,11 +22,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { StatusManager } from '@/components/project/status-manager';
 import {
   useProject,
   useProjectStatuses,
   useUpdateProject,
   useDeleteProject,
+  useCreateProjectStatus,
+  useUpdateProjectStatus,
+  useDeleteProjectStatus,
 } from '@/hooks/use-project';
 
 const updateProjectSchema = z.object({
@@ -45,12 +49,19 @@ export default function ProjectSettingsPage({
   const { workspaceId, projectId } = use(params);
 
   const { data: project, isLoading } = useProject(workspaceId, projectId);
-  const { data: statuses } = useProjectStatuses(workspaceId);
+  const { data: statuses, isLoading: statusesLoading } = useProjectStatuses(workspaceId);
   const { mutate: updateProject, isPending: isUpdating } = useUpdateProject(
     workspaceId,
     projectId,
   );
   const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject(workspaceId);
+
+  const { mutate: createStatus, isPending: isCreatingStatus } =
+    useCreateProjectStatus(workspaceId);
+  const { mutate: updateStatus, isPending: isUpdatingStatus } =
+    useUpdateProjectStatus(workspaceId);
+  const { mutate: deleteStatus, isPending: isDeletingStatus } =
+    useDeleteProjectStatus(workspaceId);
 
   const {
     register,
@@ -130,6 +141,29 @@ export default function ProjectSettingsPage({
               {isUpdating ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Proje Statusları</CardTitle>
+          <CardDescription>
+            Workspace genelinde kullanılan proje durumlarını özelleştir
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StatusManager
+            title="Statuslar"
+            description="Sistem statusları silinemez, sadece custom olanlar düzenlenebilir"
+            statuses={statuses}
+            isLoading={statusesLoading}
+            onCreate={(data) => createStatus(data)}
+            onUpdate={(id, data) => updateStatus({ statusId: id, payload: data })}
+            onDelete={(id) => deleteStatus(id)}
+            isCreating={isCreatingStatus}
+            isUpdating={isUpdatingStatus}
+            isDeleting={isDeletingStatus}
+          />
         </CardContent>
       </Card>
 
