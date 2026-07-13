@@ -31,3 +31,13 @@ export interface UpdateProjectPayload {
   description?: string;
   statusId?: string;
 }
+
+export interface CreateProjectStatusPayload {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateProjectStatusPayload {
+  name?: string;
+  color?: string;
+}

@@ -4,6 +4,8 @@ import type {
   ProjectStatus,
   CreateProjectPayload,
   UpdateProjectPayload,
+  CreateProjectStatusPayload,
+  UpdateProjectStatusPayload,
 } from './project.types';
 
 export const projectService = {
@@ -41,5 +43,32 @@ export const projectService = {
 
   remove: async (workspaceId: string, projectId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/projects/${projectId}`);
+  },
+
+  createStatus: async (
+    workspaceId: string,
+    payload: CreateProjectStatusPayload,
+  ): Promise<ProjectStatus> => {
+    const { data } = await api.post<ProjectStatus>(
+      `/workspaces/${workspaceId}/projects/statuses`,
+      payload,
+    );
+    return data;
+  },
+
+  updateStatus: async (
+    workspaceId: string,
+    statusId: string,
+    payload: UpdateProjectStatusPayload,
+  ): Promise<ProjectStatus> => {
+    const { data } = await api.patch<ProjectStatus>(
+      `/workspaces/${workspaceId}/projects/statuses/${statusId}`,
+      payload,
+    );
+    return data;
+  },
+
+  deleteStatus: async (workspaceId: string, statusId: string): Promise<void> => {
+    await api.delete(`/workspaces/${workspaceId}/projects/statuses/${statusId}`);
   },
 };
