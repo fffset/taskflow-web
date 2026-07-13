@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { projectService } from '@/services/project/project.service';
-import type { CreateProjectPayload, UpdateProjectPayload } from '@/services/project/project.types';
+import type {
+  CreateProjectPayload,
+  UpdateProjectPayload,
+  CreateProjectStatusPayload,
+  UpdateProjectStatusPayload,
+} from '@/services/project/project.types';
 
 export function useProjects(workspaceId: string) {
   return useQuery({
@@ -73,6 +78,58 @@ export function useDeleteProject(workspaceId: string) {
     },
     onError: () => {
       toast.error('Proje silinemedi');
+    },
+  });
+}
+
+export function useCreateProjectStatus(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateProjectStatusPayload) =>
+      projectService.createStatus(workspaceId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['project-statuses', workspaceId] });
+      toast.success('Status eklendi');
+    },
+    onError: () => {
+      toast.error('Status eklenemedi');
+    },
+  });
+}
+
+export function useUpdateProjectStatus(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      statusId,
+      payload,
+    }: {
+      statusId: string;
+      payload: UpdateProjectStatusPayload;
+    }) => projectService.updateStatus(workspaceId, statusId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['project-statuses', workspaceId] });
+      toast.success('Status güncellendi');
+    },
+    onError: () => {
+      toast.error('Status güncellenemedi');
+    },
+  });
+}
+
+export function useDeleteProjectStatus(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (statusId: string) => projectService.deleteStatus(workspaceId, statusId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['project-statuses', workspaceId] });
+      toast.success('Status silindi');
+    },
+    onError: () => {
+      toast.error('Status silinemedi (sistem status\'u olabilir)');
     },
   });
 }
