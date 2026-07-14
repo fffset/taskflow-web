@@ -11,3 +11,7 @@ export interface Board {
 export interface CreateBoardPayload {
   name: string;
 }
+
+export interface UpdateBoardPayload {
+  name?: string;
+}
