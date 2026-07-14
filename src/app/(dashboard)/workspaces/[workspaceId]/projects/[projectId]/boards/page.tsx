@@ -2,23 +2,35 @@
 
 import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Kanban, Settings } from 'lucide-react';
+import { Plus, Kanban, Settings, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useBoards, useCreateBoard } from '@/hooks/use-board';
+import { useBoards, useCreateBoard, useUpdateBoard, useDeleteBoard } from '@/hooks/use-board';
+import type { Board } from '@/services/board/board.types';
 
-const createBoardSchema = z.object({
+const boardSchema = z.object({
   name: z.string().min(1, 'Board adı gerekli'),
 });
 
-type CreateBoardForm = z.infer<typeof createBoardSchema>;
+type BoardForm = z.infer<typeof boardSchema>;
 
 export default function BoardsPage({
   params,
@@ -26,23 +38,39 @@ export default function BoardsPage({
   params: Promise<{ workspaceId: string; projectId: string }>;
 }) {
   const { workspaceId, projectId } = use(params);
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingBoard, setEditingBoard] = useState<Board | null>(null);
   const router = useRouter();
 
   const { data: boards, isLoading } = useBoards(workspaceId, projectId);
-  const { mutate: createBoard, isPending } = useCreateBoard(workspaceId, projectId);
+  const { mutate: createBoard, isPending: isCreating } = useCreateBoard(workspaceId, projectId);
+  const { mutate: updateBoard, isPending: isUpdating } = useUpdateBoard(workspaceId, projectId);
+  const { mutate: deleteBoard } = useDeleteBoard(workspaceId, projectId);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateBoardForm>({
-    resolver: zodResolver(createBoardSchema),
-  });
+  const createForm = useForm<BoardForm>({ resolver: zodResolver(boardSchema) });
+  const editForm = useForm<BoardForm>({ resolver: zodResolver(boardSchema) });
 
-  const onSubmit = (data: CreateBoardForm) => {
+  const onCreate = (data: BoardForm) => {
     createBoard(data, {
       onSuccess: () => {
-        setOpen(false);
-        reset();
+        setCreateOpen(false);
+        createForm.reset();
       },
     });
+  };
+
+  const onUpdate = (data: BoardForm) => {
+    if (editingBoard) {
+      updateBoard(
+        { boardId: editingBoard.id, payload: data },
+        { onSuccess: () => setEditingBoard(null) },
+      );
+    }
+  };
+
+  const startEdit = (board: Board) => {
+    setEditingBoard(board);
+    editForm.reset({ name: board.name });
   };
 
   return (
@@ -58,13 +86,15 @@ export default function BoardsPage({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => router.push(`/workspaces/${workspaceId}/projects/${projectId}/settings`)}
+              onClick={() =>
+                router.push(`/workspaces/${workspaceId}/projects/${projectId}/settings`)
+              }
               title="Proje Ayarları"
             >
               <Settings className="w-4 h-4" />
             </Button>
 
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
@@ -75,16 +105,18 @@ export default function BoardsPage({
                 <DialogHeader>
                   <DialogTitle>Board Oluştur</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
+                <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4 mt-2">
                   <div className="space-y-2">
                     <Label>İsim</Label>
-                    <Input placeholder="Sprint 1" {...register('name')} />
-                    {errors.name && (
-                      <p className="text-sm text-destructive">{errors.name.message}</p>
+                    <Input placeholder="Sprint 1" {...createForm.register('name')} />
+                    {createForm.formState.errors.name && (
+                      <p className="text-sm text-destructive">
+                        {createForm.formState.errors.name.message}
+                      </p>
                     )}
                   </div>
-                  <Button type="submit" className="w-full" disabled={isPending}>
-                    {isPending ? 'Oluşturuluyor...' : 'Oluştur'}
+                  <Button type="submit" className="w-full" disabled={isCreating}>
+                    {isCreating ? 'Oluşturuluyor...' : 'Oluştur'}
                   </Button>
                 </form>
               </DialogContent>
@@ -103,7 +135,7 @@ export default function BoardsPage({
             <Kanban className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Henüz board yok</h2>
             <p className="text-muted-foreground mb-6">İlk board&apos;unu oluştur</p>
-            <Button onClick={() => setOpen(true)}>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Board Oluştur
             </Button>
@@ -113,7 +145,7 @@ export default function BoardsPage({
             {boards?.map((board) => (
               <Card
                 key={board.id}
-                className="cursor-pointer hover:border-primary transition-colors"
+                className="cursor-pointer hover:border-primary transition-colors group"
                 onClick={() =>
                   router.push(
                     `/workspaces/${workspaceId}/projects/${projectId}/boards/${board.id}`,
@@ -121,7 +153,51 @@ export default function BoardsPage({
                 }
               >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{board.name}</CardTitle>
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-lg">{board.name}</CardTitle>
+                    <div
+                      className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7"
+                        onClick={() => startEdit(board)}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-7 h-7 text-destructive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Board silinsin mi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              &quot;{board.name}&quot; board&apos;u ve içindeki tüm
+                              task&apos;lar kalıcı olarak silinecek.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteBoard(board.id)}
+                              className="bg-destructive text-white hover:bg-destructive/90"
+                            >
+                              Sil
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
@@ -133,6 +209,23 @@ export default function BoardsPage({
           </div>
         )}
       </div>
+
+      <Dialog open={!!editingBoard} onOpenChange={(open) => !open && setEditingBoard(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Board Düzenle</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editForm.handleSubmit(onUpdate)} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>İsim</Label>
+              <Input {...editForm.register('name')} />
+            </div>
+            <Button type="submit" className="w-full" disabled={isUpdating}>
+              {isUpdating ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
