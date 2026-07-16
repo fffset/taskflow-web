@@ -2,7 +2,22 @@
 
 import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Kanban, Settings, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Kanban, Settings, Pencil, Trash2, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,7 +38,13 @@ import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useBoards, useCreateBoard, useUpdateBoard, useDeleteBoard } from '@/hooks/use-board';
+import {
+  useBoards,
+  useCreateBoard,
+  useUpdateBoard,
+  useDeleteBoard,
+  useReorderBoards,
+} from '@/hooks/use-board';
 import type { Board } from '@/services/board/board.types';
 
 const boardSchema = z.object({
@@ -31,6 +52,95 @@ const boardSchema = z.object({
 });
 
 type BoardForm = z.infer<typeof boardSchema>;
+
+function SortableBoardCard({
+  board,
+  workspaceId,
+  projectId,
+  onEdit,
+  onDelete,
+}: {
+  board: Board;
+  workspaceId: string;
+  projectId: string;
+  onEdit: (board: Board) => void;
+  onDelete: (id: string) => void;
+}) {
+  const router = useRouter();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: board.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="cursor-pointer hover:border-primary transition-colors group"
+      onClick={() =>
+        router.push(`/workspaces/${workspaceId}/projects/${projectId}/boards/${board.id}`)
+      }
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-1.5">
+            <button
+              {...attributes}
+              {...listeners}
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+            >
+              <GripVertical className="w-4 h-4" />
+            </button>
+            <CardTitle className="text-lg">{board.name}</CardTitle>
+          </div>
+
+          <div
+            className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onEdit(board)}>
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="w-7 h-7 text-destructive">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Board silinsin mi?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    &quot;{board.name}&quot; board&apos;u ve içindeki tüm task&apos;lar
+                    kalıcı olarak silinecek.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDelete(board.id)}
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                  >
+                    Sil
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">{board._count?.tasks ?? 0} task</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function BoardsPage({
   params,
@@ -46,6 +156,11 @@ export default function BoardsPage({
   const { mutate: createBoard, isPending: isCreating } = useCreateBoard(workspaceId, projectId);
   const { mutate: updateBoard, isPending: isUpdating } = useUpdateBoard(workspaceId, projectId);
   const { mutate: deleteBoard } = useDeleteBoard(workspaceId, projectId);
+  const { mutate: reorderBoards } = useReorderBoards(workspaceId, projectId);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   const createForm = useForm<BoardForm>({ resolver: zodResolver(boardSchema) });
   const editForm = useForm<BoardForm>({ resolver: zodResolver(boardSchema) });
@@ -71,6 +186,17 @@ export default function BoardsPage({
   const startEdit = (board: Board) => {
     setEditingBoard(board);
     editForm.reset({ name: board.name });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !boards) return;
+
+    const oldIndex = boards.findIndex((b) => b.id === active.id);
+    const newIndex = boards.findIndex((b) => b.id === over.id);
+    const reordered = arrayMove(boards, oldIndex, newIndex);
+
+    reorderBoards(reordered.map((b) => b.id));
   };
 
   return (
@@ -141,72 +267,29 @@ export default function BoardsPage({
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {boards?.map((board) => (
-              <Card
-                key={board.id}
-                className="cursor-pointer hover:border-primary transition-colors group"
-                onClick={() =>
-                  router.push(
-                    `/workspaces/${workspaceId}/projects/${projectId}/boards/${board.id}`,
-                  )
-                }
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{board.name}</CardTitle>
-                    <div
-                      className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="w-7 h-7"
-                        onClick={() => startEdit(board)}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="w-7 h-7 text-destructive"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Board silinsin mi?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              &quot;{board.name}&quot; board&apos;u ve içindeki tüm
-                              task&apos;lar kalıcı olarak silinecek.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteBoard(board.id)}
-                              className="bg-destructive text-white hover:bg-destructive/90"
-                            >
-                              Sil
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {board._count?.tasks ?? 0} task
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={boards?.map((b) => b.id) ?? []}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {boards?.map((board) => (
+                  <SortableBoardCard
+                    key={board.id}
+                    board={board}
+                    workspaceId={workspaceId}
+                    projectId={projectId}
+                    onEdit={startEdit}
+                    onDelete={(id) => deleteBoard(id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
