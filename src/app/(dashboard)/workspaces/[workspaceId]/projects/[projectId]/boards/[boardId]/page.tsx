@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, use } from 'react';
-import { Plus, Calendar, MessageSquare, ListTree } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Calendar, MessageSquare, ListTree, ListChecks } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -163,7 +164,8 @@ export default function BoardDetailPage({
 }: {
   params: Promise<{ workspaceId: string; projectId: string; boardId: string }>;
 }) {
-  const { workspaceId, boardId } = use(params);
+  const { workspaceId, projectId, boardId } = use(params);
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -214,10 +216,8 @@ export default function BoardDetailPage({
     const task = tasks?.find((t) => t.id === taskId);
 
     // Kritik nokta: cache güncellemesi ile overlay'in kaldırılması AYNI
-    // senkron blokta yapılıyor. React 18+ otomatik batching sayesinde
-    // bu ikisi tek render'da birleşir — kart hiçbir zaman eski kolonda
-    // "görünür" hale gelip sonra yeni kolona sıçramaz, direkt yeni
-    // kolonda belirir.
+    // senkron blokta yapılıyor — React 18+ otomatik batching sayesinde
+    // kart hiçbir zaman eski kolonda görünüp yeni kolona sıçramaz.
     if (over && task && task.statusId !== newStatusId) {
       queryClient.setQueryData<Task[]>(['tasks', boardId], (old) =>
         old?.map((t) => (t.id === taskId ? { ...t, statusId: newStatusId! } : t)),
@@ -237,69 +237,86 @@ export default function BoardDetailPage({
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Board</h1>
 
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Yeni Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Task Oluştur</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
-                <div className="space-y-2">
-                  <Label>Başlık</Label>
-                  <Input placeholder="JWT refresh token implementasyonu" {...register('title')} />
-                  {errors.title && (
-                    <p className="text-sm text-destructive">{errors.title.message}</p>
-                  )}
-                </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  `/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}/statuses`,
+                )
+              }
+            >
+              <ListChecks className="w-4 h-4 mr-2" />
+              Statuslar
+            </Button>
 
-                <div className="space-y-2">
-                  <Label>Açıklama (opsiyonel)</Label>
-                  <Input placeholder="Detaylar..." {...register('description')} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <select
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                    {...register('statusId')}
-                  >
-                    <option value="">Seç...</option>
-                    {statuses?.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.statusId && (
-                    <p className="text-sm text-destructive">{errors.statusId.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Öncelik</Label>
-                  <select
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                    {...register('priority')}
-                  >
-                    <option value="NONE">Yok</option>
-                    <option value="LOW">Düşük</option>
-                    <option value="MEDIUM">Orta</option>
-                    <option value="HIGH">Yüksek</option>
-                    <option value="URGENT">Acil</option>
-                  </select>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isPending}>
-                  {isPending ? 'Oluşturuluyor...' : 'Oluştur'}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Yeni Task
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Task Oluştur</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
+                  <div className="space-y-2">
+                    <Label>Başlık</Label>
+                    <Input
+                      placeholder="JWT refresh token implementasyonu"
+                      {...register('title')}
+                    />
+                    {errors.title && (
+                      <p className="text-sm text-destructive">{errors.title.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Açıklama (opsiyonel)</Label>
+                    <Input placeholder="Detaylar..." {...register('description')} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <select
+                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      {...register('statusId')}
+                    >
+                      <option value="">Seç...</option>
+                      {statuses?.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.statusId && (
+                      <p className="text-sm text-destructive">{errors.statusId.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Öncelik</Label>
+                    <select
+                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      {...register('priority')}
+                    >
+                      <option value="NONE">Yok</option>
+                      <option value="LOW">Düşük</option>
+                      <option value="MEDIUM">Orta</option>
+                      <option value="HIGH">Yüksek</option>
+                      <option value="URGENT">Acil</option>
+                    </select>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isPending}>
+                    {isPending ? 'Oluşturuluyor...' : 'Oluştur'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {isLoading ? (
