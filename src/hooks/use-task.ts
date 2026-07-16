@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { taskService } from '@/services/task/task.service';
-import type { CreateTaskPayload, UpdateTaskPayload } from '@/services/task/task.types';
+import type {
+  CreateTaskPayload,
+  UpdateTaskPayload,
+  CreateTaskStatusPayload,
+  UpdateTaskStatusPayload,
+  Task,
+} from '@/services/task/task.types';
 
 export function useTasks(workspaceId: string, boardId: string) {
   return useQuery({
@@ -44,17 +50,21 @@ export function useCreateTask(workspaceId: string, boardId: string) {
 
 export function useUpdateTask(workspaceId: string, boardId: string) {
   const queryClient = useQueryClient();
+  const queryKey = ['tasks', boardId];
 
   return useMutation({
     mutationFn: ({ taskId, payload }: { taskId: string; payload: UpdateTaskPayload }) =>
       taskService.update(workspaceId, taskId, payload),
-    onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['tasks', boardId] });
-      void queryClient.invalidateQueries({ queryKey: ['task', variables.taskId] });
-      toast.success('Task güncellendi');
-    },
     onError: () => {
       toast.error('Task güncellenemedi');
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onSuccess: (updatedTask, variables) => {
+      queryClient.setQueryData<Task[]>(queryKey, (old) =>
+        old?.map((task) => (task.id === variables.taskId ? updatedTask : task)),
+      );
+      void queryClient.invalidateQueries({ queryKey: ['task', variables.taskId] });
+      toast.success('Task güncellendi');
     },
   });
 }
@@ -70,6 +80,57 @@ export function useDeleteTask(workspaceId: string, boardId: string) {
     },
     onError: () => {
       toast.error('Task silinemedi');
+    },
+  });
+}
+
+export function useCreateTaskStatus(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateTaskStatusPayload) => taskService.createStatus(workspaceId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['task-statuses', workspaceId] });
+      toast.success('Status eklendi');
+    },
+    onError: () => {
+      toast.error('Status eklenemedi');
+    },
+  });
+}
+
+export function useUpdateTaskStatus(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      statusId,
+      payload,
+    }: {
+      statusId: string;
+      payload: UpdateTaskStatusPayload;
+    }) => taskService.updateStatus(workspaceId, statusId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['task-statuses', workspaceId] });
+      toast.success('Status güncellendi');
+    },
+    onError: () => {
+      toast.error('Status güncellenemedi');
+    },
+  });
+}
+
+export function useDeleteTaskStatus(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (statusId: string) => taskService.deleteStatus(workspaceId, statusId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['task-statuses', workspaceId] });
+      toast.success('Status silindi');
+    },
+    onError: () => {
+      toast.error('Status silinemedi (sistem status\'u olabilir)');
     },
   });
 }
