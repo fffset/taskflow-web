@@ -2,6 +2,7 @@
 
 import { useState, use } from 'react';
 import { Plus, Calendar, MessageSquare, ListTree } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
   DragOverlay,
@@ -167,6 +168,8 @@ export default function BoardDetailPage({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
+  const queryClient = useQueryClient();
+
   const { data: tasks, isLoading } = useTasks(workspaceId, boardId);
   const { data: statuses } = useTaskStatuses(workspaceId);
   const { mutate: createTask, isPending } = useCreateTask(workspaceId, boardId);
@@ -206,17 +209,26 @@ export default function BoardDetailPage({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveTask(null);
-
-    if (!over) return;
-
     const taskId = active.id as string;
-    const newStatusId = over.id as string;
+    const newStatusId = over ? (over.id as string) : null;
     const task = tasks?.find((t) => t.id === taskId);
 
-    if (task && task.statusId !== newStatusId) {
-      updateTask({ taskId, payload: { statusId: newStatusId } });
+    // Kritik nokta: cache güncellemesi ile overlay'in kaldırılması AYNI
+    // senkron blokta yapılıyor. React 18+ otomatik batching sayesinde
+    // bu ikisi tek render'da birleşir — kart hiçbir zaman eski kolonda
+    // "görünür" hale gelip sonra yeni kolona sıçramaz, direkt yeni
+    // kolonda belirir.
+    if (over && task && task.statusId !== newStatusId) {
+      queryClient.setQueryData<Task[]>(['tasks', boardId], (old) =>
+        old?.map((t) => (t.id === taskId ? { ...t, statusId: newStatusId! } : t)),
+      );
     }
+
+    setActiveTask(null);
+
+    if (!over || !task || task.statusId === newStatusId) return;
+
+    updateTask({ taskId, payload: { statusId: newStatusId! } });
   };
 
   return (
