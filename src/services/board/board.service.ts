@@ -34,6 +34,18 @@ export const boardService = {
     return data;
   },
 
+  reorder: async (
+    workspaceId: string,
+    projectId: string,
+    boardIds: string[],
+  ): Promise<Board[]> => {
+    const { data } = await api.patch<Board[]>(
+      `/workspaces/${workspaceId}/projects/${projectId}/boards/reorder`,
+      { boardIds },
+    );
+    return data;
+  },
+
   remove: async (workspaceId: string, projectId: string, boardId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/projects/${projectId}/boards/${boardId}`);
   },
