@@ -1,5 +1,12 @@
 import { api } from '../api';
-import type { Task, TaskStatus, CreateTaskPayload, UpdateTaskPayload } from './task.types';
+import type {
+  Task,
+  TaskStatus,
+  CreateTaskPayload,
+  UpdateTaskPayload,
+  CreateTaskStatusPayload,
+  UpdateTaskStatusPayload,
+} from './task.types';
 
 export const taskService = {
   getAll: async (workspaceId: string, boardId: string): Promise<Task[]> => {
@@ -40,5 +47,32 @@ export const taskService = {
 
   remove: async (workspaceId: string, taskId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/tasks/${taskId}`);
+  },
+
+  createStatus: async (
+    workspaceId: string,
+    payload: CreateTaskStatusPayload,
+  ): Promise<TaskStatus> => {
+    const { data } = await api.post<TaskStatus>(
+      `/workspaces/${workspaceId}/tasks/statuses`,
+      payload,
+    );
+    return data;
+  },
+
+  updateStatus: async (
+    workspaceId: string,
+    statusId: string,
+    payload: UpdateTaskStatusPayload,
+  ): Promise<TaskStatus> => {
+    const { data } = await api.patch<TaskStatus>(
+      `/workspaces/${workspaceId}/tasks/statuses/${statusId}`,
+      payload,
+    );
+    return data;
+  },
+
+  deleteStatus: async (workspaceId: string, statusId: string): Promise<void> => {
+    await api.delete(`/workspaces/${workspaceId}/tasks/statuses/${statusId}`);
   },
 };

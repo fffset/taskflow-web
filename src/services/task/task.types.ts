@@ -26,15 +26,15 @@ export interface Task {
   statusId: string;
   status: TaskStatus;
   labels?: { label: { id: string; name: string; color: string } }[];
-  _count?: { subTasks: number; comments: number };
-  createdAt: string;
-  updatedAt: string;
   subTasks?: {
     id: string;
     title: string;
     status: TaskStatus;
     assignee: { id: string; name: string; avatarUrl: string | null } | null;
   }[];
+  _count?: { subTasks: number; comments: number };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTaskPayload {
@@ -53,4 +53,14 @@ export interface UpdateTaskPayload {
   priority?: TaskPriority;
   dueDate?: string;
   assigneeId?: string;
+}
+
+export interface CreateTaskStatusPayload {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTaskStatusPayload {
+  name?: string;
+  color?: string;
 }
