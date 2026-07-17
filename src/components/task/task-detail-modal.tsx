@@ -1,13 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Trash2, Calendar as CalendarIcon, X, Tag } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,42 +35,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useTask, useUpdateTask, useDeleteTask, useTaskStatuses } from '@/hooks/use-task';
+import { useLabels, useToggleTaskLabel } from '@/hooks/use-label';
 import type { TaskPriority } from '@/services/task/task.types';
 
-const priorityOptions: { value: TaskPriority; label: string; color: string }[] = [
-  { value: 'NONE', label: 'Yok', color: 'bg-gray-100 text-gray-600' },
-  { value: 'LOW', label: 'Düşük', color: 'bg-blue-100 text-blue-600' },
-  { value: 'MEDIUM', label: 'Orta', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'HIGH', label: 'Yüksek', color: 'bg-orange-100 text-orange-700' },
-  { value: 'URGENT', label: 'Acil', color: 'bg-red-100 text-red-700' },
+const priorityOptions: { value: TaskPriority; label: string }[] = [
+  { value: 'NONE', label: 'Yok' },
+  { value: 'LOW', label: 'Düşük' },
+  { value: 'MEDIUM', label: 'Orta' },
+  { value: 'HIGH', label: 'Yüksek' },
+  { value: 'URGENT', label: 'Acil' },
 ];
 
 interface TaskDetailModalProps {
   workspaceId: string;
+  projectId: string;
   boardId: string;
   taskId: string | null;
   onClose: () => void;
 }
 
 // Bu component, taskId değiştiğinde parent'ta `key={taskId}` ile yeniden mount edilir.
-// Bu sayede useEffect ile state senkronize etmeye gerek kalmaz — component her taskId
-// değişiminde sıfırdan kurulur ve useState direkt doğru initial değerle başlar.
+// Bu sayede useEffect ile state senkronize etmeye gerek kalmaz.
 export function TaskDetailModal({
   workspaceId,
+  projectId,
   boardId,
   taskId,
   onClose,
 }: TaskDetailModalProps) {
   const { data: task, isLoading } = useTask(workspaceId, taskId ?? '');
   const { data: statuses } = useTaskStatuses(workspaceId);
+  const { data: projectLabels } = useLabels(workspaceId, projectId);
   const { mutate: updateTask } = useUpdateTask(workspaceId, boardId);
   const { mutate: deleteTask } = useDeleteTask(workspaceId, boardId);
+  const { add: addLabel, remove: removeLabel } = useToggleTaskLabel(
+    workspaceId,
+    boardId,
+    taskId ?? '',
+  );
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
+  const [labelPopoverOpen, setLabelPopoverOpen] = useState(false);
 
   if (!taskId) return null;
 
@@ -102,6 +115,16 @@ export function TaskDetailModal({
     if (task) {
       deleteTask(task.id);
       onClose();
+    }
+  };
+
+  const taskLabelIds = new Set(task?.labels?.map((l) => l.label.id) ?? []);
+
+  const toggleLabel = (labelId: string) => {
+    if (taskLabelIds.has(labelId)) {
+      removeLabel.mutate(labelId);
+    } else {
+      addLabel.mutate(labelId);
     }
   };
 
@@ -226,24 +249,70 @@ export function TaskDetailModal({
                   )}
                 </div>
 
-                {task.labels && task.labels.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                      Etiketler
-                    </p>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Etiketler</p>
+                    <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="w-5 h-5">
+                          <Tag className="w-3.5 h-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-2" align="end">
+                        {projectLabels && projectLabels.length > 0 ? (
+                          <div className="space-y-1">
+                            {projectLabels.map((label) => (
+                              <button
+                                key={label.id}
+                                onClick={() => toggleLabel(label.id)}
+                                className="w-full flex items-center gap-2 p-1.5 rounded-md hover:bg-muted text-left text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={taskLabelIds.has(label.id)}
+                                  readOnly
+                                  className="pointer-events-none"
+                                />
+                                <span
+                                  className="text-xs px-2 py-0.5 rounded-full text-white"
+                                  style={{ backgroundColor: label.color }}
+                                >
+                                  {label.name}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            Bu projede henüz etiket yok
+                          </p>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {task.labels && task.labels.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {task.labels.map(({ label }) => (
                         <span
                           key={label.id}
-                          className="text-xs px-2 py-0.5 rounded-full text-white"
+                          className="text-xs px-2 py-0.5 rounded-full text-white inline-flex items-center gap-1"
                           style={{ backgroundColor: label.color }}
                         >
                           {label.name}
+                          <button
+                            onClick={() => removeLabel.mutate(label.id)}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Etiket yok</p>
+                  )}
+                </div>
 
                 <div className="pt-4 border-t">
                   <AlertDialog>

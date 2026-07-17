@@ -148,9 +148,8 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`bg-muted/40 rounded-xl p-2 min-h-[400px] transition-colors ${
-        isOver ? 'bg-muted' : ''
-      }`}
+      className={`bg-muted/40 rounded-xl p-2 min-h-[400px] transition-colors ${isOver ? 'bg-muted' : ''
+        }`}
     >
       {children}
     </div>
@@ -377,6 +376,7 @@ export default function BoardDetailPage({
       </div>
 
       <TaskDetailModal
+        projectId={projectId}
         key={selectedTaskId}
         workspaceId={workspaceId}
         boardId={boardId}
