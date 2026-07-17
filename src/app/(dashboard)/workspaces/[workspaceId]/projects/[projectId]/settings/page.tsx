@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { StatusManager } from '@/components/project/status-manager';
+import { LabelManager } from '@/components/label/label-manager';
 import {
   useProject,
   useProjectStatuses,
@@ -164,6 +165,18 @@ export default function ProjectSettingsPage({
             isUpdating={isUpdatingStatus}
             isDeleting={isDeletingStatus}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Etiketler</CardTitle>
+          <CardDescription>
+            Bu projedeki task&apos;lara eklenebilecek etiketleri yönet
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LabelManager workspaceId={workspaceId} projectId={projectId} />
         </CardContent>
       </Card>
 
