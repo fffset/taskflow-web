@@ -70,3 +70,16 @@ export function useDeleteWorkspace() {
     },
   });
 }
+
+export function useWorkspaceMembers(workspaceId: string) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['workspace', workspaceId],
+    queryFn: () => workspaceService.getOne(workspaceId),
+    enabled: !!workspaceId,
+  });
+
+  return {
+    members: data?.members ?? [],
+    isLoading,
+  };
+}
