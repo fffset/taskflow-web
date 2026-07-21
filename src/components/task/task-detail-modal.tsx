@@ -81,11 +81,8 @@ export function TaskDetailModal({
   const [labelPopoverOpen, setLabelPopoverOpen] = useState(false);
 
   // Herhangi bir Select/Popover açık mı, bunu kendi state'imizde takip
-  // ediyoruz. Ref kullanıyoruz çünkü senkron okunması lazım — Dialog'un
-  // onPointerDownOutside/onInteractOutside callback'i her tıklamada
-  // anlık olarak "şu an açık bir dropdown var mı?" bilmeli. Bu sayede
-  // Radix'in portal/DOM iç detaylarını tahmin etmeye gerek kalmıyor:
-  // açık bir dropdown varsa Dialog'un kapanmasını doğrudan engelliyoruz.
+  // ediyoruz. Dialog'un onPointerDownOutside/onInteractOutside callback'i
+  // her tıklamada anlık olarak "açık bir dropdown var mı?" bilmeli.
   const openPopoverCount = useRef(0);
 
   const trackPopoverOpen = (open: boolean) => {
@@ -150,10 +147,6 @@ export function TaskDetailModal({
     }
   };
 
-  // Dialog'u kapatmaya çalışan her "dışarı" etkileşiminde, eğer o anda
-  // açık bir Select/Popover varsa engelliyoruz. Bu, hangi CSS/data
-  // attribute'unun kullanıldığını bilmeye gerek bırakmayan, garanti
-  // çalışan bir yöntem.
   const guardClose = (event: Event) => {
     if (openPopoverCount.current > 0) {
       event.preventDefault();
@@ -163,7 +156,7 @@ export function TaskDetailModal({
   return (
     <Dialog open={!!taskId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+        className="max-w-3xl max-h-[85vh] overflow-y-auto"
         onPointerDownOutside={guardClose}
         onInteractOutside={guardClose}
       >
@@ -239,7 +232,7 @@ export function TaskDetailModal({
                         )}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="w-(--radix-select-trigger-width)">
                       <SelectItem value="unassigned">
                         <span className="text-muted-foreground">Atanmamış</span>
                       </SelectItem>
@@ -267,7 +260,7 @@ export function TaskDetailModal({
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="w-(--radix-select-trigger-width)">
                       {statuses?.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           <span className="flex items-center gap-2">
@@ -293,7 +286,7 @@ export function TaskDetailModal({
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="w-(--radix-select-trigger-width)">
                       {priorityOptions.map((p) => (
                         <SelectItem key={p.value} value={p.value}>
                           {p.label}
