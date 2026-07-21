@@ -27,7 +27,9 @@ Taskflow API (localhost:8000)
 - **Client state** → Zustand (auth durumu, UI tercihleri)
 - **Form state** → React Hook Form + Zod validasyonu
 
-**Auth akışı:** httpOnly cookie tabanlı. Axios `withCredentials: true` ile her istekte cookie otomatik gönderilir. 401 alınca interceptor otomatik `/auth/refresh` dener (login/register/refresh endpoint'leri hariç). Ayrıca dashboard'da aktifken 13 dakikada bir arka planda otomatik refresh yapılır (`useAutoRefresh`), 15 dakikalık access token süresi asla dolmaz.
+**Auth akışı:** httpOnly cookie tabanlı. Axios `withCredentials: true` ile her istekte cookie otomatik gönderilir. 401 alınca interceptor otomatik `/auth/refresh` dener (login/register/refresh endpoint'leri hariç). Dashboard'da aktifken 13 dakikada bir arka planda otomatik refresh yapılır (`useAutoRefresh`), 15 dakikalık access token süresi asla dolmaz.
+
+**Kanban drag-drop:** `@dnd-kit` ile task'lar kolonlar arası sürüklenebilir, board'lar sıralanabilir. Optimistic update pattern'i kullanılıyor — `queryClient.setQueryData` çağrısı, state güncellemesiyle aynı senkron blokta yapılır (React 18+ otomatik batching) ki drag-drop sırasında "eski konuma sıçrama" (flicker) oluşmasın.
 
 ---
 
@@ -45,17 +47,19 @@ src/
         page.tsx                                    → workspace listesi
         [workspaceId]/
           layout.tsx                                → WorkspaceShell (sidebar+header) sarmalayıcı
-          settings/                                  → workspace ayarları, üye yönetimi
+          settings/page.tsx                          → workspace ayarları (güncelle/sil)
           projects/
             page.tsx                                → proje listesi
             [projectId]/
+              settings/page.tsx                      → proje ayarları + status + label yönetimi
               boards/
-                page.tsx                             → board listesi
+                page.tsx                             → board listesi (sürükle-bırak sıralama)
                 [boardId]/
                   page.tsx                           → kanban board
+                  statuses/page.tsx                  → task status yönetimi
       settings/
         profile/                                     → kullanıcı profili, şifre değiştir
-      layout.tsx                                     → auth guard + auto-refresh
+      layout.tsx                                        → auth guard + auto-refresh
     invite/
       accept/[token]/page.tsx                        → davet kabul sayfası
     layout.tsx                                        → root layout
@@ -66,12 +70,12 @@ src/
     common/                 → paylaşılan genel bileşenler
     layout/                 → sidebar, header, breadcrumb, user-menu, workspace-shell
     board/                  → kanban bileşenleri
-    task/                   → task card, task-detail-modal
+    task/                   → task-detail-modal (TaskDetailModal + TaskDetailForm ayrımı)
     workspace/              → workspace ayar formları, üye listesi
-    project/                → status yönetimi
-    label/                  → label yönetimi
+    project/                → status-manager (reusable, hem project hem task status'ta kullanılıyor)
+    label/                  → label-manager
 
-  hooks/                    → custom hooks (use-auth, use-workspace, use-task ...)
+  hooks/                    → custom hooks (use-auth, use-workspace, use-project, use-board, use-task, use-label)
 
   services/                 → API katmanı
     api.ts                  → axios instance + interceptor
@@ -81,7 +85,6 @@ src/
     board/
     task/
     label/
-    user/
 
   store/
     auth.store.ts
@@ -96,6 +99,13 @@ src/
   types/
     api.types.ts
 ```
+
+**Mimari prensipler:**
+- Her feature kendi klasöründe — servis, tip ve hook birbirine yakın
+- Component'lar API'ye direkt bağlanmaz, her zaman `services/` üzerinden
+- Server state asla Zustand'da tutulmaz, TanStack Query cache'i yeterli
+- Zod şemaları hem form validasyonu hem tip inference için kullanılır
+- Yükleme (loading) gate'i olan component'ler, veri kesin geldiğinde mount olacak ayrı bir alt component'e bölünür (örn. `TaskDetailModal` → `TaskDetailForm`) — bu, `useState(data.field)` gibi initial state'lerin veri gelmeden önce kilitlenip boş kalmasını engeller
 
 ---
 
@@ -120,13 +130,21 @@ Backend'in ayrıca çalışıyor olması gerekir (`taskflow-api`, `localhost:800
 
 ---
 
-## Roadmap
+## Bilinen Notlar / Sorun Giderme
 
-Bu roadmap, backend'deki (`taskflow-api`) faz numaralandırmasıyla senkron tutulur. Faz 1, backend Faz 1'in tüm CRUD ve auth yüzeyini kapsayacak şekilde genişletilmiştir.
+**"Modal içinde dropdown açıkken tıklayınca modal kapanıyor" hatası:** Bu, `radix-ui` paketinin bazı versiyonlarında (Select/Popover/Dialog arasındaki "dismissable layer" senkronizasyonuyla ilgili) bilinen bir bug'dı. `radix-ui@1.6.4`'e güncellemek sorunu çözdü. Eğer tekrar ortaya çıkarsa önce `npm install radix-ui@latest` dene.
+
+**Next.js dev server "heap out of memory" çökmesi:** Uzun süre açık kalan dev server'da bazen oluşabiliyor. `.next` klasörünü silip yeniden başlatmak genelde çözüyor: `rm -rf .next && npm run dev`.
 
 ---
 
-### Faz 1 — Core Flows 🚧
+## Roadmap
+
+Bu roadmap, backend'deki (`taskflow-api`) faz numaralandırmasıyla senkron tutulur.
+
+---
+
+### Faz 1 — Core Flows ✅
 
 | # | Özellik | Durum |
 |---|---------|-------|
@@ -155,15 +173,15 @@ Bu roadmap, backend'deki (`taskflow-api`) faz numaralandırmasıyla senkron tutu
 | 1.23 | Kullanıcı menüsü — dropdown (profil, ayarlar, çıkış) | ✅ |
 | 1.24 | Toast bildirimleri (sonner) — task CRUD işlemlerinde başarı/hata | ✅ |
 | 1.25 | Root sayfa yönlendirmesi (`/` → auth durumuna göre login/workspaces) | ✅ |
-| 1.26 | Workspace güncelleme/silme UI'ı (ayarlar sayfası) | ⬜ |
-| 1.27 | Project güncelleme/silme UI'ı | ⬜ |
-| 1.28 | Project custom status yönetimi UI'ı (ekle/düzenle/sil) | ⬜ |
-| 1.29 | Board güncelleme/silme UI'ı | ⬜ |
-| 1.30 | Board sıralama — sürükle-bırak ile reorder | ⬜ |
-| 1.31 | Task custom status yönetimi UI'ı (ekle/düzenle/sil) | ⬜ |
-| 1.32 | Label yönetimi UI — proje bazlı label oluşturma/düzenleme/silme | ⬜ |
-| 1.33 | Task'a label ekleme/kaldırma (çoklu seçim, task detail modal içinde) | ⬜ |
-| 1.34 | Task assignee seçimi — workspace üyeleri arasından atama | ⬜ |
+| 1.26 | Workspace güncelleme/silme UI'ı (ayarlar sayfası) | ✅ |
+| 1.27 | Project güncelleme/silme UI'ı | ✅ |
+| 1.28 | Project custom status yönetimi UI'ı (ekle/düzenle/sil) | ✅ |
+| 1.29 | Board güncelleme/silme UI'ı | ✅ |
+| 1.30 | Board sıralama — sürükle-bırak ile reorder (optimistic update) | ✅ |
+| 1.31 | Task custom status yönetimi UI'ı (ekle/düzenle/sil) | ✅ |
+| 1.32 | Label yönetimi UI — proje bazlı label oluşturma/düzenleme/silme | ✅ |
+| 1.33 | Task'a label ekleme/kaldırma (task detail modalı içinde) | ✅ |
+| 1.34 | Task assignee seçimi — workspace üyeleri arasından atama | ✅ |
 | 1.35 | Kullanıcı profil sayfası — isim/avatar güncelleme | ⬜ |
 | 1.36 | Şifre değiştirme formu — mevcut şifre doğrulama ile | ⬜ |
 | 1.37 | Hesap silme — çift onaylı akış | ⬜ |
@@ -188,7 +206,7 @@ Backend Faz 2 (yorum, bildirim, WebSocket, RabbitMQ) ile birebir entegrasyon.
 | # | Özellik | Durum |
 |---|---------|-------|
 | 2.1 | Task yorum bölümü — ekle/düzenle/sil | ⬜ |
-| 2.2 | @mention — kullanıcı etiketleme autocomplete | ⬜ |
+| 2.2 | Mention sistemi — @kullanıcı etiketleme autocomplete | ⬜ |
 | 2.3 | Task aktivite akışı görünümü | ⬜ |
 | 2.4 | WebSocket bağlantısı — real-time task güncellemeleri | ⬜ |
 | 2.5 | In-app bildirim merkezi — okundu/okunmadı | ⬜ |
@@ -251,6 +269,19 @@ Backend Faz 3 (big data pipeline) ile entegrasyon.
 | 6.5 | Erişilebilirlik (a11y) denetimi | ⬜ |
 | 6.6 | Dark mode desteği | ⬜ |
 | 6.7 | i18n — çoklu dil desteği (next-intl, TR/EN). Tüm hardcoded metinleri messages/ altına taşı | ⬜ |
+| 6.8 | React Native mobil uygulama — services/hooks/store katmanları paylaşılacak, sadece UI yeniden yazılacak, auth header-token tabanlı olacak (backend zaten destekliyor) | ⬜ |
+
+---
+
+## Bekleyen İyileştirmeler (Faz'a bağlanmamış, ileride ele alınacak)
+
+Kullanıcı geri bildirimiyle biriken, henüz hangi faza dahil edileceği netleşmemiş işler:
+
+| # | İstek | Not |
+|---|-------|-----|
+| N.1 | Label picker'da arama + aranan etiket bulunamazsa listeden direkt yeni etiket oluşturabilme (renk otomatik/rastgele atanabilir) | `cmdk` (Command component) ile combobox yapısına geçiş gerekiyor |
+| N.2 | Tüm dropdown'larda (Status, Priority, Assignee) arama kutusu olması | Aynı `cmdk` altyapısı N.1 ile birlikte kullanılabilir |
+| N.3 | Task'a birden fazla kişi assign edebilme (çoklu assignee) | **Backend schema değişikliği gerektiriyor** — şu an `Task.assigneeId` tekil bir alan; çoklu kişi için ayrı bir ara tablo (`TaskAssignee`, many-to-many) tasarlanmalı. Frontend işine başlamadan önce backend'de bu karar netleşmeli |
 
 ---
 
@@ -264,7 +295,8 @@ Next.js 15 · TypeScript · TanStack Query · Zustand · Shadcn/ui · Tailwind �
 - httpOnly cookie tabanlı auth, otomatik token refresh interceptor'ı + arka plan yenileme
 - Server state (TanStack Query) ve client state (Zustand) net ayrımı
 - Zod ile uçtan uca tip güvenli form validasyonu
-- Sürükle-bırak kanban board, real-time senkronizasyon
-- Workspace/proje/görev CRUD akışları, rol tabanlı üye yönetimi
-- AI destekli task asistanı ve RAG tabanlı doküman arama entegrasyonu
+- Sürükle-bırak kanban board, optimistic update ile akıcı UX
+- Workspace/proje/görev CRUD akışları, custom status ve label yönetimi
+- Rol tabanlı üye yönetimi (planlanan)
+- AI destekli task asistanı ve RAG tabanlı doküman arama entegrasyonu (planlanan)
 ```
