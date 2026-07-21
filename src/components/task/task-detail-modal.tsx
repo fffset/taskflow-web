@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Trash2, Calendar as CalendarIcon, X, Tag } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Trash2, Calendar as CalendarIcon, X, Tag, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { useTask, useUpdateTask, useDeleteTask, useTaskStatuses } from '@/hooks/use-task';
 import { useLabels, useToggleTaskLabel } from '@/hooks/use-label';
+import { useWorkspaceMembers } from '@/hooks/use-workspace';
 import type { TaskPriority } from '@/services/task/task.types';
 
 const priorityOptions: { value: TaskPriority; label: string }[] = [
@@ -56,8 +57,6 @@ interface TaskDetailModalProps {
   onClose: () => void;
 }
 
-// Bu component, taskId değiştiğinde parent'ta `key={taskId}` ile yeniden mount edilir.
-// Bu sayede useEffect ile state senkronize etmeye gerek kalmaz.
 export function TaskDetailModal({
   workspaceId,
   projectId,
@@ -68,6 +67,7 @@ export function TaskDetailModal({
   const { data: task, isLoading } = useTask(workspaceId, taskId ?? '');
   const { data: statuses } = useTaskStatuses(workspaceId);
   const { data: projectLabels } = useLabels(workspaceId, projectId);
+  const { members } = useWorkspaceMembers(workspaceId);
   const { mutate: updateTask } = useUpdateTask(workspaceId, boardId);
   const { mutate: deleteTask } = useDeleteTask(workspaceId, boardId);
   const { add: addLabel, remove: removeLabel } = useToggleTaskLabel(
@@ -79,6 +79,19 @@ export function TaskDetailModal({
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [labelPopoverOpen, setLabelPopoverOpen] = useState(false);
+
+  // Herhangi bir Select/Popover açık mı, bunu kendi state'imizde takip
+  // ediyoruz. Ref kullanıyoruz çünkü senkron okunması lazım — Dialog'un
+  // onPointerDownOutside/onInteractOutside callback'i her tıklamada
+  // anlık olarak "şu an açık bir dropdown var mı?" bilmeli. Bu sayede
+  // Radix'in portal/DOM iç detaylarını tahmin etmeye gerek kalmıyor:
+  // açık bir dropdown varsa Dialog'un kapanmasını doğrudan engelliyoruz.
+  const openPopoverCount = useRef(0);
+
+  const trackPopoverOpen = (open: boolean) => {
+    openPopoverCount.current += open ? 1 : -1;
+    if (openPopoverCount.current < 0) openPopoverCount.current = 0;
+  };
 
   if (!taskId) return null;
 
@@ -100,6 +113,15 @@ export function TaskDetailModal({
 
   const handlePriorityChange = (priority: TaskPriority) => {
     if (task) updateTask({ taskId: task.id, payload: { priority } });
+  };
+
+  const handleAssigneeChange = (assigneeId: string) => {
+    if (task) {
+      updateTask({
+        taskId: task.id,
+        payload: { assigneeId: assigneeId === 'unassigned' ? undefined : assigneeId },
+      });
+    }
   };
 
   const handleDueDateChange = (date: Date | undefined) => {
@@ -128,9 +150,23 @@ export function TaskDetailModal({
     }
   };
 
+  // Dialog'u kapatmaya çalışan her "dışarı" etkileşiminde, eğer o anda
+  // açık bir Select/Popover varsa engelliyoruz. Bu, hangi CSS/data
+  // attribute'unun kullanıldığını bilmeye gerek bırakmayan, garanti
+  // çalışan bir yöntem.
+  const guardClose = (event: Event) => {
+    if (openPopoverCount.current > 0) {
+      event.preventDefault();
+    }
+  };
+
   return (
     <Dialog open={!!taskId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+        onPointerDownOutside={guardClose}
+        onInteractOutside={guardClose}
+      >
         {isLoading || !task ? (
           <div className="py-12 text-center text-muted-foreground">Yükleniyor...</div>
         ) : (
@@ -180,8 +216,54 @@ export function TaskDetailModal({
 
               <div className="space-y-4">
                 <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Atanan</p>
+                  <Select
+                    value={task.assigneeId ?? 'unassigned'}
+                    onValueChange={handleAssigneeChange}
+                    onOpenChange={trackPopoverOpen}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {task.assignee ? (
+                          <span className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium">
+                              {task.assignee.name.charAt(0)}
+                            </span>
+                            {task.assignee.name}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <User className="w-3.5 h-3.5" />
+                            Atanmamış
+                          </span>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">
+                        <span className="text-muted-foreground">Atanmamış</span>
+                      </SelectItem>
+                      {members.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          <span className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium">
+                              {member.name.charAt(0)}
+                            </span>
+                            {member.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1.5">Status</p>
-                  <Select value={task.statusId} onValueChange={handleStatusChange}>
+                  <Select
+                    value={task.statusId}
+                    onValueChange={handleStatusChange}
+                    onOpenChange={trackPopoverOpen}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -203,7 +285,11 @@ export function TaskDetailModal({
 
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1.5">Öncelik</p>
-                  <Select value={task.priority} onValueChange={handlePriorityChange}>
+                  <Select
+                    value={task.priority}
+                    onValueChange={handlePriorityChange}
+                    onOpenChange={trackPopoverOpen}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -221,7 +307,7 @@ export function TaskDetailModal({
                   <p className="text-xs font-medium text-muted-foreground mb-1.5">
                     Bitiş Tarihi
                   </p>
-                  <Popover>
+                  <Popover onOpenChange={trackPopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start font-normal">
                         <CalendarIcon className="w-4 h-4 mr-2" />
@@ -252,7 +338,13 @@ export function TaskDetailModal({
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs font-medium text-muted-foreground">Etiketler</p>
-                    <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
+                    <Popover
+                      open={labelPopoverOpen}
+                      onOpenChange={(open) => {
+                        setLabelPopoverOpen(open);
+                        trackPopoverOpen(open);
+                      }}
+                    >
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="w-5 h-5">
                           <Tag className="w-3.5 h-3.5" />
