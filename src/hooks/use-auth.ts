@@ -37,31 +37,36 @@ export function useMe() {
   });
 }
 
-export function useLogin() {
+export function useLogin(redirectTo?: string) {
   const setUser = useAuthStore((s) => s.setUser);
   const router = useRouter();
   const queryClient = useQueryClient();
-
+ 
   return useMutation({
     mutationFn: (payload: LoginPayload) => authService.login(payload),
     onSuccess: (user) => {
       setUser(user);
       queryClient.setQueryData(['me'], user);
-      router.push('/workspaces');
+      router.push(redirectTo ?? '/workspaces');
     },
   });
 }
 
-export function useRegister() {
+export function useRegister(redirectTo?: string) {
   const router = useRouter();
-
+ 
   return useMutation({
     mutationFn: (payload: RegisterPayload) => authService.register(payload),
     onSuccess: () => {
-      router.push('/login');
+      // Register sonrası login'e gidiyor, redirect'i login URL'ine taşı
+      const loginUrl = redirectTo
+        ? `/login?redirect=${encodeURIComponent(redirectTo)}`
+        : '/login';
+      router.push(loginUrl);
     },
   });
 }
+
 
 export function useLogout() {
   const logout = useAuthStore((s) => s.logout);
