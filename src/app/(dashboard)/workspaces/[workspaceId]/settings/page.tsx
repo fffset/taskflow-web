@@ -22,7 +22,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { MemberManager } from '@/components/workspace/member-manager';
 import { useWorkspace, useUpdateWorkspace, useDeleteWorkspace } from '@/hooks/use-workspace';
+import { useAuthStore } from '@/store/auth.store';
 
 const updateWorkspaceSchema = z.object({
   name: z.string().min(2, 'En az 2 karakter'),
@@ -37,6 +39,7 @@ export default function WorkspaceSettingsPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = use(params);
+  const currentUser = useAuthStore((s) => s.user);
 
   const { data: workspace, isLoading } = useWorkspace(workspaceId);
   const { mutate: updateWorkspace, isPending: isUpdating } = useUpdateWorkspace(workspaceId);
@@ -107,6 +110,24 @@ export default function WorkspaceSettingsPage({
               {isUpdating ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Üyeler</CardTitle>
+          <CardDescription>
+            Workspace&apos;teki üyeleri ve rollerini yönet
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {currentUser && workspace && (
+            <MemberManager
+              workspaceId={workspaceId}
+              currentUserId={currentUser.id}
+              currentUserRole={workspace.role}
+            />
+          )}
         </CardContent>
       </Card>
 
