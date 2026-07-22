@@ -14,6 +14,7 @@ import { useWorkspaces, useCreateWorkspace } from '@/hooks/use-workspace';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { UserMenu } from '@/components/layout/user-menu';
 
 const createWorkspaceSchema = z.object({
   name: z.string().min(2, 'En az 2 karakter'),
@@ -55,6 +56,11 @@ export default function WorkspacesPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <header className="h-14 border-b flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur z-10">
+        <span className="font-semibold">Taskflow</span>
+        <UserMenu />
+      </header>
+
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
