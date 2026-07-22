@@ -21,7 +21,13 @@ api.interceptors.response.use(
         await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
         return api.request(error.config);
       } catch {
-        window.location.href = '/login';
+        // Burada artık sabit bir sayfaya yönlendirme YAPMIYORUZ.
+        // Sebep: bazı sayfalar (örn. /invite/accept/[token]) 401 durumunu
+        // kendi mantığıyla ele alıp kullanıcıya "Giriş Yap" / "Hesap Oluştur"
+        // gibi bağlamsal seçenekler sunuyor. Sabit "/login" yönlendirmesi
+        // bu sayfaların kendi akışını devre dışı bırakıyordu.
+        // Genel dashboard sayfaları zaten kendi useMe()/isError kontrolüyle
+        // gerektiğinde login'e yönlendiriyor.
       }
     }
     return Promise.reject(error);
