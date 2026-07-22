@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +19,10 @@ import { registerSchema, type RegisterFormValues } from '@/lib/validators/auth.s
 import { useRegister } from '@/hooks/use-auth';
 
 export default function RegisterPage() {
-  const { mutate: register, isPending, error } = useRegister();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
+
+  const { mutate: register, isPending, error } = useRegister(redirectTo ?? undefined);
 
   const {
     register: formRegister,
@@ -31,6 +35,9 @@ export default function RegisterPage() {
   const onSubmit = (data: RegisterFormValues) => {
     register(data);
   };
+
+  // Register sonrası login sayfasına gidiyor — redirect'i login linkine de taşı
+  const loginHref = redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -92,7 +99,7 @@ export default function RegisterPage() {
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
             Zaten hesabın var mı?{' '}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href={loginHref} className="text-primary hover:underline">
               Giriş yap
             </Link>
           </p>
