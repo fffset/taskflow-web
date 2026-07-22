@@ -24,6 +24,14 @@ export interface WorkspaceDetail extends Workspace {
   members: WorkspaceMemberInfo[];
 }
 
+export interface PendingInvite {
+  id: string;
+  email: string;
+  role: WorkspaceRole;
+  expiresAt: string;
+  createdAt: string;
+}
+
 export interface CreateWorkspacePayload {
   name: string;
   slug: string;
@@ -37,5 +45,9 @@ export interface UpdateWorkspacePayload {
 
 export interface InviteMemberPayload {
   email: string;
+  role: WorkspaceRole;
+}
+
+export interface UpdateMemberRolePayload {
   role: WorkspaceRole;
 }

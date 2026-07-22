@@ -4,6 +4,9 @@ import type {
   WorkspaceDetail,
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
+  InviteMemberPayload,
+  UpdateMemberRolePayload,
+  PendingInvite,
 } from './workspace.types';
 
 export const workspaceService = {
@@ -29,5 +32,42 @@ export const workspaceService = {
 
   remove: async (workspaceId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}`);
+  },
+
+  inviteMember: async (
+    workspaceId: string,
+    payload: InviteMemberPayload,
+  ): Promise<{ token: string }> => {
+    const { data } = await api.post<{ token: string }>(
+      `/workspaces/${workspaceId}/invite`,
+      payload,
+    );
+    return data;
+  },
+
+  acceptInvite: async (token: string): Promise<Workspace> => {
+    const { data } = await api.post<Workspace>(`/workspaces/invite/accept/${token}`);
+    return data;
+  },
+
+  removeMember: async (workspaceId: string, userId: string): Promise<void> => {
+    await api.delete(`/workspaces/${workspaceId}/members/${userId}`);
+  },
+
+  updateMemberRole: async (
+    workspaceId: string,
+    userId: string,
+    payload: UpdateMemberRolePayload,
+  ): Promise<void> => {
+    await api.patch(`/workspaces/${workspaceId}/members/${userId}/role`, payload);
+  },
+
+  getPendingInvites: async (workspaceId: string): Promise<PendingInvite[]> => {
+    const { data } = await api.get<PendingInvite[]>(`/workspaces/${workspaceId}/invites`);
+    return data;
+  },
+
+  cancelInvite: async (workspaceId: string, inviteId: string): Promise<void> => {
+    await api.delete(`/workspaces/${workspaceId}/invites/${inviteId}`);
   },
 };
