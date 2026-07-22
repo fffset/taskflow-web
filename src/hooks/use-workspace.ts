@@ -5,6 +5,8 @@ import { workspaceService } from '@/services/workspace/workspace.service';
 import type {
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
+  InviteMemberPayload,
+  UpdateMemberRolePayload,
 } from '@/services/workspace/workspace.types';
 
 export function useWorkspaces() {
@@ -18,6 +20,23 @@ export function useWorkspace(workspaceId: string) {
   return useQuery({
     queryKey: ['workspace', workspaceId],
     queryFn: () => workspaceService.getOne(workspaceId),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useWorkspaceMembers(workspaceId: string) {
+  const { data, isLoading } = useWorkspace(workspaceId);
+
+  return {
+    members: data?.members ?? [],
+    isLoading,
+  };
+}
+
+export function usePendingInvites(workspaceId: string) {
+  return useQuery({
+    queryKey: ['pending-invites', workspaceId],
+    queryFn: () => workspaceService.getPendingInvites(workspaceId),
     enabled: !!workspaceId,
   });
 }
@@ -71,15 +90,81 @@ export function useDeleteWorkspace() {
   });
 }
 
-export function useWorkspaceMembers(workspaceId: string) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['workspace', workspaceId],
-    queryFn: () => workspaceService.getOne(workspaceId),
-    enabled: !!workspaceId,
-  });
+export function useInviteMember(workspaceId: string) {
+  const queryClient = useQueryClient();
 
-  return {
-    members: data?.members ?? [],
-    isLoading,
-  };
+  return useMutation({
+    mutationFn: (payload: InviteMemberPayload) =>
+      workspaceService.inviteMember(workspaceId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['pending-invites', workspaceId] });
+      toast.success('Davet oluşturuldu');
+    },
+    onError: () => {
+      toast.error('Davet gönderilemedi');
+    },
+  });
+}
+
+export function useCancelInvite(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (inviteId: string) => workspaceService.cancelInvite(workspaceId, inviteId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['pending-invites', workspaceId] });
+      toast.success('Davet iptal edildi');
+    },
+    onError: () => {
+      toast.error('Davet iptal edilemedi');
+    },
+  });
+}
+
+export function useAcceptInvite() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (token: string) => workspaceService.acceptInvite(token),
+    onSuccess: (workspace) => {
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      toast.success(`${workspace.name} workspace'ine katıldın`);
+      router.push(`/workspaces/${workspace.id}/projects`);
+    },
+    onError: () => {
+      toast.error('Davet kabul edilemedi — geçersiz veya süresi dolmuş olabilir');
+    },
+  });
+}
+
+export function useRemoveMember(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => workspaceService.removeMember(workspaceId, userId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      toast.success('Üye çıkarıldı');
+    },
+    onError: () => {
+      toast.error('Üye çıkarılamadı');
+    },
+  });
+}
+
+export function useUpdateMemberRole(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, payload }: { userId: string; payload: UpdateMemberRolePayload }) =>
+      workspaceService.updateMemberRole(workspaceId, userId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      toast.success('Rol güncellendi');
+    },
+    onError: () => {
+      toast.error('Rol güncellenemedi');
+    },
+  });
 }
