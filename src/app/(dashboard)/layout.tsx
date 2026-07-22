@@ -1,12 +1,20 @@
 'use client';
 
-import { useAutoRefresh, useMe } from '@/hooks/use-auth';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMe } from '@/hooks/use-auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isLoading, isFetching, isSuccess, isError } = useMe();
-  useAutoRefresh();
+  const router = useRouter();
 
   const showLoading = isLoading || (isFetching && !isSuccess) || (!isSuccess && !isError);
+
+  useEffect(() => {
+    if (isError) {
+      router.push('/login');
+    }
+  }, [isError, router]);
 
   if (showLoading) {
     return (
