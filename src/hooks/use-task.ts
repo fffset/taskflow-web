@@ -134,3 +134,11 @@ export function useDeleteTaskStatus(workspaceId: string) {
     },
   });
 }
+
+export function useTaskSearch(workspaceId: string, query: string) {
+  return useQuery({
+    queryKey: ['task-search', workspaceId, query],
+    queryFn: () => taskService.search(workspaceId, query),
+    enabled: !!workspaceId && query.trim().length >= 2,
+  });
+}
