@@ -72,7 +72,6 @@ export function useRegister(redirectTo?: string) {
   });
 }
 
-
 export function useLogout() {
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
@@ -84,6 +83,22 @@ export function useLogout() {
       logout();
       queryClient.clear();
       router.push('/login');
+    },
+  });
+}
+
+export function useLoginWith2fa(redirectTo?: string) {
+  const setUser = useAuthStore((s) => s.setUser);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: { email: string; password: string; code: string }) =>
+      authService.loginWith2fa(payload),
+    onSuccess: (user) => {
+      setUser(user);
+      queryClient.setQueryData(['me'], user);
+      router.push(redirectTo ?? '/workspaces');
     },
   });
 }
