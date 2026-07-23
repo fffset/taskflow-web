@@ -75,4 +75,12 @@ export const taskService = {
   deleteStatus: async (workspaceId: string, statusId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/tasks/statuses/${statusId}`);
   },
+
+   search: async (workspaceId: string, query: string): Promise<Task[]> => {
+    const { data } = await api.get<Task[]>(
+      `/workspaces/${workspaceId}/tasks/search`,
+      { params: { q: query } },
+    );
+    return data;
+  },
 };
