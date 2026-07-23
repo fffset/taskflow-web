@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronsUpDown, FolderKanban, Settings, Plus, Check } from 'lucide-react';
+import { ChevronsUpDown, FolderKanban, Settings, Plus, Check, Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWorkspaces } from '@/hooks/use-workspace';
 import { useProjects } from '@/hooks/use-project';
+import { TaskSearchDialog } from '@/components/task/task-search-dialog';
 
 interface SidebarProps {
   workspaceId: string;
@@ -21,11 +23,24 @@ interface SidebarProps {
 export function Sidebar({ workspaceId }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const { data: workspaces } = useWorkspaces();
   const { data: projects, isLoading: projectsLoading } = useProjects(workspaceId);
 
   const currentWorkspace = workspaces?.find((w) => w.id === workspaceId);
+
+  // Cmd+K / Ctrl+K kısayolu ile arama aç
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <aside className="w-64 border-r bg-muted/20 flex flex-col h-screen sticky top-0">
@@ -67,6 +82,15 @@ export function Sidebar({ workspaceId }: SidebarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <button
+          onClick={() => setSearchOpen(true)}
+          className="w-full flex items-center gap-2 mt-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors border"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="flex-1 text-left">Task ara...</span>
+          <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded border">⌘K</kbd>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3">
@@ -120,6 +144,12 @@ export function Sidebar({ workspaceId }: SidebarProps) {
           Ayarlar
         </Link>
       </div>
+
+      <TaskSearchDialog
+        workspaceId={workspaceId}
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+      />
     </aside>
   );
 }
