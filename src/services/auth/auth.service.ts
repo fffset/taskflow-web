@@ -33,4 +33,12 @@ export const authService = {
   verify2fa: async (code: string): Promise<void> => {
     await api.post('/auth/2fa/verify', { code });
   },
+  loginWith2fa: async (payload: {
+    email: string;
+    password: string;
+    code: string;
+  }): Promise<User> => {
+    const { data } = await api.post<User>('/auth/login/2fa', payload);
+    return data;
+  },
 };
