@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Trash2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +28,7 @@ import {
   useDeleteAccount,
 } from '@/hooks/use-user';
 import { UserMenu } from '@/components/layout/user-menu';
+import { TwoFactorSetup } from '@/components/user/two-factor-setup';
 
 const updateProfileSchema = z.object({
   name: z.string().min(2, 'En az 2 karakter'),
@@ -135,24 +135,27 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {profile?.twoFactorEnabled ? (
-                    <Badge variant="default" className="gap-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      2FA Aktif
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">2FA Kapalı</Badge>
-                  )}
-                  <span>
-                    {profile?._count?.workspaceMemberships ?? 0} workspace&apos;e üye
-                  </span>
+                <div className="text-sm text-muted-foreground">
+                  {profile?._count?.workspaceMemberships ?? 0} workspace&apos;e üye
                 </div>
 
                 <Button type="submit" disabled={isUpdating}>
                   {isUpdating ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>İki Adımlı Doğrulama (2FA)</CardTitle>
+              <CardDescription>
+                Hesabına ekstra güvenlik katmanı ekle — her girişte authenticator
+                uygulamasından bir kod girmen istenir
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {profile && <TwoFactorSetup isEnabled={profile.twoFactorEnabled} />}
             </CardContent>
           </Card>
 
