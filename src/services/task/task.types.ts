@@ -13,6 +13,7 @@ export interface Task {
   id: string;
   workspaceId: string;
   boardId: string;
+  projectId?: string; // sadece search sonuçlarında dolu gelir
   title: string;
   description: string | null;
   priority: TaskPriority;
