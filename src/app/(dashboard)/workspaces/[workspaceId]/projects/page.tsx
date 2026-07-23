@@ -6,7 +6,6 @@ import { Plus, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +13,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProjects, useProjectStatuses, useCreateProject } from '@/hooks/use-project';
+import { EmptyState } from '@/components/common/empty-state/empty-state';
+import { PageSkeleton } from '@/components/common/loading/list-skeleton';
 
 const createProjectSchema = z.object({
   name: z.string().min(2, 'En az 2 karakter'),
@@ -53,6 +54,10 @@ export default function ProjectsPage({
       },
     });
   };
+
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,22 +117,14 @@ export default function ProjectsPage({
           </Dialog>
         </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 rounded-xl" />
-            ))}
-          </div>
-        ) : projects?.length === 0 ? (
-          <div className="text-center py-20">
-            <FolderKanban className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Henüz proje yok</h2>
-            <p className="text-muted-foreground mb-6">İlk projeni oluştur</p>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Proje Oluştur
-            </Button>
-          </div>
+        {projects?.length === 0 ? (
+          <EmptyState
+            icon={FolderKanban}
+            title="Henüz proje yok"
+            description="İlk projeni oluştur"
+            actionLabel="Proje Oluştur"
+            onAction={() => setOpen(true)}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects?.map((project) => (

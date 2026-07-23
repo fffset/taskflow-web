@@ -20,7 +20,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -46,6 +45,8 @@ import {
   useReorderBoards,
 } from '@/hooks/use-board';
 import type { Board } from '@/services/board/board.types';
+import { EmptyState } from '@/components/common/empty-state/empty-state';
+import { PageSkeleton } from '@/components/common/loading/list-skeleton';
 
 const boardSchema = z.object({
   name: z.string().min(1, 'Board adı gerekli'),
@@ -199,6 +200,10 @@ export default function BoardsPage({
     reorderBoards(reordered.map((b) => b.id));
   };
 
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-6 py-10">
@@ -250,22 +255,14 @@ export default function BoardsPage({
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 rounded-xl" />
-            ))}
-          </div>
-        ) : boards?.length === 0 ? (
-          <div className="text-center py-20">
-            <Kanban className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Henüz board yok</h2>
-            <p className="text-muted-foreground mb-6">İlk board&apos;unu oluştur</p>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Board Oluştur
-            </Button>
-          </div>
+        {boards?.length === 0 ? (
+          <EmptyState
+            icon={Kanban}
+            title="Henüz board yok"
+            description="İlk board'unu oluştur"
+            actionLabel="Board Oluştur"
+            onAction={() => setCreateOpen(true)}
+          />
         ) : (
           <DndContext
             sensors={sensors}
