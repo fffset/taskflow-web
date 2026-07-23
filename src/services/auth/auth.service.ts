@@ -24,4 +24,13 @@ export const authService = {
   refresh: async (): Promise<void> => {
     await api.post('/auth/refresh');
   },
+
+  enable2fa: async (): Promise<{ otpAuthUrl: string; secret: string }> => {
+    const { data } = await api.post<{ otpAuthUrl: string; secret: string }>('/auth/2fa/enable');
+    return data;
+  },
+
+  verify2fa: async (code: string): Promise<void> => {
+    await api.post('/auth/2fa/verify', { code });
+  },
 };
