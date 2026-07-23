@@ -4,20 +4,25 @@ import { authService } from '@/services/auth/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import type { LoginPayload, RegisterPayload } from '@/services/auth/auth.types';
 import { useEffect } from 'react';
+import { refreshTokens } from '@/services/api';
 
 
 export function useAutoRefresh() {
   useEffect(() => {
     const interval = setInterval(
       () => {
-        void authService.refresh().catch(() => {
-          // sessizce geç — süresi gerçekten dolmuşsa zaten
-          // sonraki istekte axios interceptor login'e yönlendirecek
+        // Artık api.ts'teki paylaşılan/kilitli refreshTokens() fonksiyonunu
+        // kullanıyoruz. Eğer o sırada zaten başka bir istekten (örn.
+        // window-focus refetch'inden) tetiklenen bir refresh varsa, aynı
+        // promise'e katılır — asla iki eş zamanlı refresh isteği gitmez.
+        void refreshTokens().catch(() => {
+          // sessizce geç — süresi gerçekten dolmuşsa sonraki istekte
+          // normal 401 akışı devreye girecek
         });
       },
-      13 * 60 * 1000, // 13 dakika — access token 15 dakikada dolduğu için önden yenile
+      13 * 60 * 1000,
     );
-
+ 
     return () => clearInterval(interval);
   }, []);
 }
