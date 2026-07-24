@@ -18,9 +18,14 @@ import { TaskSearchDialog } from '@/components/task/task-search-dialog';
 
 interface SidebarProps {
   workspaceId: string;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ workspaceId }: SidebarProps) {
+// Not: Bu component artık kendi genişlik/pozisyon (width, sticky, h-screen)
+// değerlerini TAŞIMIYOR — çünkü hem masaüstünde sabit sidebar olarak hem
+// mobilde Sheet (kayar panel) içinde kullanılıyor, ikisinin boyut/pozisyon
+// ihtiyacı farklı. Bu sorumluluk artık WorkspaceShell'deki wrapper'larda.
+export function Sidebar({ workspaceId, onNavigate }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -30,7 +35,6 @@ export function Sidebar({ workspaceId }: SidebarProps) {
 
   const currentWorkspace = workspaces?.find((w) => w.id === workspaceId);
 
-  // Cmd+K / Ctrl+K kısayolu ile arama aç
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -42,8 +46,17 @@ export function Sidebar({ workspaceId }: SidebarProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const handleWorkspaceSelect = (targetWorkspaceId: string) => {
+    router.push(`/workspaces/${targetWorkspaceId}/projects`);
+    onNavigate?.();
+  };
+
+  const handleNavigate = () => {
+    onNavigate?.();
+  };
+
   return (
-    <aside className="w-64 border-r bg-muted/20 flex flex-col h-screen sticky top-0">
+    <div className="w-full h-full border-r bg-muted/20 flex flex-col">
       <div className="p-3 border-b">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -66,7 +79,7 @@ export function Sidebar({ workspaceId }: SidebarProps) {
             {workspaces?.map((ws) => (
               <DropdownMenuItem
                 key={ws.id}
-                onClick={() => router.push(`/workspaces/${ws.id}/projects`)}
+                onClick={() => handleWorkspaceSelect(ws.id)}
                 className="flex items-center gap-2"
               >
                 <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center text-xs font-semibold">
@@ -77,7 +90,12 @@ export function Sidebar({ workspaceId }: SidebarProps) {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/workspaces')}>
+            <DropdownMenuItem
+              onClick={() => {
+                router.push('/workspaces');
+                onNavigate?.();
+              }}
+            >
               Tüm Workspace&apos;ler
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -89,7 +107,9 @@ export function Sidebar({ workspaceId }: SidebarProps) {
         >
           <Search className="w-3.5 h-3.5" />
           <span className="flex-1 text-left">Task ara...</span>
-          <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded border">⌘K</kbd>
+          <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded border hidden md:inline">
+            ⌘K
+          </kbd>
         </button>
       </div>
 
@@ -100,6 +120,7 @@ export function Sidebar({ workspaceId }: SidebarProps) {
           </p>
           <Link
             href={`/workspaces/${workspaceId}/projects`}
+            onClick={handleNavigate}
             className="text-muted-foreground hover:text-foreground"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -120,6 +141,7 @@ export function Sidebar({ workspaceId }: SidebarProps) {
                 <Link
                   key={project.id}
                   href={`/workspaces/${workspaceId}/projects/${project.id}/boards`}
+                  onClick={handleNavigate}
                   className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
                     isActive
                       ? 'bg-primary/10 text-primary font-medium'
@@ -138,6 +160,7 @@ export function Sidebar({ workspaceId }: SidebarProps) {
       <div className="p-3 border-t">
         <Link
           href={`/workspaces/${workspaceId}/settings`}
+          onClick={handleNavigate}
           className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-foreground/80 hover:bg-muted transition-colors"
         >
           <Settings className="w-4 h-4" />
@@ -150,6 +173,6 @@ export function Sidebar({ workspaceId }: SidebarProps) {
         open={searchOpen}
         onOpenChange={setSearchOpen}
       />
-    </aside>
+    </div>
   );
 }
