@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { Plus, Kanban, Settings, Pencil, Trash2, GripVertical } from 'lucide-react';
 import {
   DndContext,
@@ -153,7 +153,7 @@ export default function BoardsPage({
   const [editingBoard, setEditingBoard] = useState<Board | null>(null);
   const router = useRouter();
 
-  const { data: boards, isLoading } = useBoards(workspaceId, projectId);
+  const { data: boards, isLoading, isError } = useBoards(workspaceId, projectId);
   const { mutate: createBoard, isPending: isCreating } = useCreateBoard(workspaceId, projectId);
   const { mutate: updateBoard, isPending: isUpdating } = useUpdateBoard(workspaceId, projectId);
   const { mutate: deleteBoard } = useDeleteBoard(workspaceId, projectId);
@@ -199,6 +199,11 @@ export default function BoardsPage({
 
     reorderBoards(reordered.map((b) => b.id));
   };
+
+  // Proje geçersizse (yok, veya erişim yok) gerçek 404 göster
+  if (isError) {
+    notFound();
+  }
 
   if (isLoading) {
     return <PageSkeleton />;
