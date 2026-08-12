@@ -50,7 +50,9 @@ export function CommentSection({ workspaceId, taskId }: CommentSectionProps) {
 
   const startEdit = (id: string, content: string) => {
     setEditingId(id);
-    setEditContent(renderContent(content));
+    // Ham içeriği koru, render edilmiş halini DEĞİL — yoksa mention'daki
+    // (userId) kısmı kaybolur ve "Kaydet"te backend'e düz metin gider.
+    setEditContent(content);
   };
 
   const saveEdit = () => {
