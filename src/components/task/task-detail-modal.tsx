@@ -40,6 +40,7 @@ import { useTask, useUpdateTask, useDeleteTask, useTaskStatuses } from '@/hooks/
 import { useLabels, useToggleTaskLabel } from '@/hooks/use-label';
 import { useWorkspaceMembers } from '@/hooks/use-workspace';
 import type { TaskPriority } from '@/services/task/task.types';
+import { CommentSection } from './comment-section';
 
 const priorityOptions: { value: TaskPriority; label: string }[] = [
   { value: 'NONE', label: 'Yok' },
@@ -205,6 +206,9 @@ export function TaskDetailModal({
                     </div>
                   </div>
                 )}
+
+                <CommentSection workspaceId={workspaceId} taskId={task.id} />
+
               </div>
 
               <div className="space-y-4">
