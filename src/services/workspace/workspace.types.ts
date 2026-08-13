@@ -11,6 +11,14 @@ export interface Workspace {
   createdAt: string;
 }
 
+// Mention/assignee autocomplete için hafif üye arama sonucu — tam üye
+// bilgisinden (WorkspaceMemberInfo) farklı olarak sadece gösterim için gerekli alanlar
+export interface MemberSearchResult {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
 export interface WorkspaceMemberInfo {
   id: string;
   name: string;
