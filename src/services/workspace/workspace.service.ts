@@ -7,6 +7,7 @@ import type {
   InviteMemberPayload,
   UpdateMemberRolePayload,
   PendingInvite,
+  MemberSearchResult,
 } from './workspace.types';
 
 export const workspaceService = {
@@ -69,5 +70,16 @@ export const workspaceService = {
 
   cancelInvite: async (workspaceId: string, inviteId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/invites/${inviteId}`);
+  },
+
+  searchMembers: async (
+    workspaceId: string,
+    query: string,
+  ): Promise<MemberSearchResult[]> => {
+    const { data } = await api.get<MemberSearchResult[]>(
+      `/workspaces/${workspaceId}/members/search`,
+      { params: { q: query } },
+    );
+    return data;
   },
 };

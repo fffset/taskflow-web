@@ -33,6 +33,18 @@ export function useWorkspaceMembers(workspaceId: string) {
   };
 }
 
+// Mention autocomplete için. query null iken (yani "@" tetiklenmemişken)
+// istek atılmıyor. task search'ün aksine minimum karakter şartı yok —
+// "@" yazılır yazılmaz backend zaten ilk 10 üyeyi dönüyor (bkz. searchMembers
+// query'siz çağrı davranışı, workspaces.service.ts).
+export function useMemberSearch(workspaceId: string, query: string | null) {
+  return useQuery({
+    queryKey: ['member-search', workspaceId, query],
+    queryFn: () => workspaceService.searchMembers(workspaceId, query ?? ''),
+    enabled: !!workspaceId && query !== null,
+  });
+}
+
 export function usePendingInvites(workspaceId: string) {
   return useQuery({
     queryKey: ['pending-invites', workspaceId],
