@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Send, Pencil, Trash2, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { MentionTextarea } from './mention-textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,11 +96,14 @@ export function CommentSection({ workspaceId, taskId }: CommentSectionProps) {
 
                   {editingId === comment.id ? (
                     <div className="mt-1 space-y-2">
-                      <Textarea
+                      <MentionTextarea
+                        workspaceId={workspaceId}
                         value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
+                        onChange={setEditContent}
+                        onSubmitShortcut={saveEdit}
                         rows={2}
                         className="text-sm"
+                        autoFocus
                       />
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" onClick={saveEdit}>
@@ -171,17 +174,14 @@ export function CommentSection({ workspaceId, taskId }: CommentSectionProps) {
       )}
 
       <div className="flex gap-2">
-        <Textarea
+        <MentionTextarea
+          workspaceId={workspaceId}
           value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
+          onChange={setNewComment}
+          onSubmitShortcut={handleSubmit}
           placeholder="Yorum ekle..."
           rows={2}
           className="text-sm"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              handleSubmit();
-            }
-          }}
         />
         <Button
           size="icon"
